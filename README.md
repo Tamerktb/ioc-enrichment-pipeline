@@ -63,61 +63,83 @@ This pipeline **automates the grunt work** — paste an IOC once, get a complete
 | **Evaluation & Observability** | Every enrichment is traced (latency, cache hit/miss, tool, result); full replay trace per IOC; Splunk-compatible logs |
 | **Product Thinking** | Confidence scores, clear error messages, human-readable summaries, graceful fallbacks when data is missing |
 
-## Quick Start
+## Quick Start (Web UI)
 
-### Prerequisites
-- Python 3.10+
-- API keys (optional — ipinfo.io works without one for basic lookups)
+### 3 steps — no commands to memorize
 
-### Installation
+**Step 1** — Open a terminal (`Win + R` → type `cmd` → Enter)
+
+**Step 2** — Paste this one command and press Enter:
 
 ```bash
-# Clone or navigate to the project directory
-cd "D:\IOC Enrichment Pipeline"
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy and configure environment
-cp .env.example .env
-# Edit .env with your API keys (optional — skip for limited demo)
+cd "D:\IOC Enrichment Pipeline" && pip install -r requirements.txt streamlit && streamlit run app.py
 ```
 
-### Usage
+Wait ~15 seconds. It will say something like "You can now view your app at http://localhost:8501"
+
+**Step 3** — Open your browser and go to **http://localhost:8501**
+
+You'll see a web interface with 3 tabs:
+
+| Tab | What it does |
+|---|---|
+| 🎯 **Single IOC** | Type an IP/domain/hash → click **Enrich** → see results instantly |
+| 📂 **Batch File** | Upload a CSV file → enrich multiple IOCs at once |
+| 📊 **Cache & Stats** | View cache hit rates and tool usage stats |
+
+### Example using the Web UI
+
+```
+1. Go to http://localhost:8501
+2. Type "8.8.8.8" in the IOC Value box
+3. Click "Enrich"
+4. See a card with:
+   ┌─────────────────────────────────────────┐
+   │ IP  8.8.8.8                   3.97/10  │
+   │          LOW                           │
+   │ Source: manual | Context: N/A          │
+   │ ┌─────────────────────────────────────┐ │
+   │ │ ✅ IPINFO (0.34s)                  │ │
+   │ │ Location: Mountain View, CA, US    │ │
+   │ │ ISP: Google LLC  ASN: AS15169      │ │
+   │ └─────────────────────────────────────┘ │
+   └─────────────────────────────────────────┘
+```
+
+### (Optional) Add API keys for more data
+
+The pipeline works without any keys — ipinfo.io is free and requires no sign-up.  
+To unlock VirusTotal and AbuseIPDB, get free keys and add them:
+
+1. Copy the template: `cp .env.example .env`
+2. Edit `.env` and paste your keys
+3. Free keys at: [VirusTotal](https://www.virustotal.com/gui/my-apikey) | [AbuseIPDB](https://www.abuseipdb.com/api)
+
+### Advanced: CLI usage
+
+If you prefer the terminal, the CLI is also available:
 
 ```bash
 # Enrich a single IOC
-python main.py enrich --type ip --value 8.8.8.8
+python main.py enrich --type ip --value 8.8.8.8 --format table
 
 # Enrich from a CSV file
 python main.py enrich --file tests/sample_iocs.csv
 
-# Enrich from JSON
-python main.py enrich --file tests/sample_iocs.json
-
-# Output in Splunk-compatible format
+# Output in Splunk-compatible format (for SIEM ingestion)
 python main.py enrich --type ip --value 185.130.5.173 --format splunk
 
-# Enable LLM threat summary
-python main.py enrich --type ip --value 185.130.5.173 --llm-summary
-
-# List available enrichment tools
+# View available tools
 python main.py tools
-
-# Check cache status
-python main.py cache-stats
 ```
 
-### Output Formats
-
-- **json** (default): Full structured report — enrichment data, score, timestamps, tool metadata
-- **splunk**: Key-value pair format ready for SIEM ingestion
-- **table**: Human-readable Rich terminal table
+**Output formats (CLI only):** `json` (default), `splunk`, `table`
 
 ## Project Structure
 
 ```
 ├── main.py                  # CLI entry point
+├── app.py                   # Streamlit web UI (http://localhost:8501)
 ├── config.yaml              # Global configuration
 ├── .env                     # API keys (gitignored)
 ├── requirements.txt
