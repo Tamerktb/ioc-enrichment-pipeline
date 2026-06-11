@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IOC Enrichment — Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Theme: Dark (GitHub-dark inspired) ── */
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-cell: #0d1117;
+  --border: #30363d;
+  --border-l: #21262d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --input-bg: #0d1117;
+  --placeholder: #6b7280;
+  --hover-bg: #1c2128;
+  --brand: #6366f1;
+  --brand-glow: rgba(99,102,241,0.3);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 260px;
+  background: var(--bg-cell);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.sidebar-header-icon {
+  font-size: 1.3rem;
+}
+
+.sidebar-header-title {
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text);
+}
+
+.sidebar-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+
+.sidebar-divider {
+  border: none;
+  height: 1px;
+  background: var(--border-l);
+  margin: 14px 0;
+}
+
+.sidebar-section-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* Tool row in sidebar */
+.tool-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+}
+
+.tool-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.tool-dot.ok { background: #10b981; box-shadow: 0 0 4px rgba(16,185,129,0.3); }
+.tool-dot.err { background: #ef4444; }
+
+.tool-info {
+  flex: 1;
+}
+
+.tool-name {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tool-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.tool-status {
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.tool-status.ready { color: #10b981; }
+.tool-status.missing { color: #484f58; }
+
+/* Theme selector */
+.theme-select {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+  cursor: pointer;
+}
+
+/* Cache stats */
+.cache-info {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+.cache-info strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.sidebar-footer {
+  margin-top: 24px;
+  font-size: 0.68rem;
+  color: var(--text-dim);
+}
+
+/* ── Main content ── */
+.main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 24px;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+/* ── Brand ── */
+.brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 48px 0 6px 0;
+}
+
+.brand-icon {
+  width: 44px;
+  height: 44px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+  box-shadow: 0 4px 16px var(--brand-glow);
+  flex-shrink: 0;
+}
+
+.brand-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text);
+  letter-spacing: -0.03em;
+  line-height: 1.2;
+}
+
+.hero-subtitle {
+  text-align: center;
+  font-size: 1rem;
+  color: var(--text-muted);
+  margin: 8px auto 28px auto;
+  line-height: 1.6;
+  max-width: 500px;
+}
+
+/* ── Search ── */
+.search-wrap {
+  width: 100%;
+  max-width: 560px;
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  color: var(--text-muted);
+  z-index: 2;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 15px 20px 15px 48px;
+  font-size: 1rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--input-bg);
+  color: var(--text);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+  height: 52px;
+}
+
+.search-input:focus {
+  border-color: #6366f1;
+  background: var(--bg);
+  box-shadow: 0 0 0 4px rgba(99,102,241,0.12);
+}
+
+.search-input::placeholder {
+  color: var(--placeholder);
+  font-family: 'Inter', sans-serif;
+  opacity: 1;
+}
+
+.search-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+  margin-top: 0;
+}
+
+.search-row .search-wrap {
+  flex: 1;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  height: 52px;
+  color: white;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+  transition: all 0.2s ease;
+  cursor: pointer;
+  padding: 0 20px;
+  white-space: nowrap;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-primary:hover {
+  box-shadow: 0 4px 16px rgba(99,102,241,0.4);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+/* ── Chips ── */
+.chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 560px;
+  margin-top: 10px;
+}
+
+.chips-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  margin-right: 4px;
+  white-space: nowrap;
+}
+
+.chip {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 100px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: 'JetBrains Mono', monospace;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-decoration: none;
+  line-height: 1.5;
+}
+
+.chip:hover {
+  background: var(--hover-bg);
+  border-color: #6366f1;
+  color: #a5b4fc;
+}
+
+/* ── Batch toggle row ── */
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  width: 100%;
+  max-width: 560px;
+  margin-top: 8px;
+}
+
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding: 8px 16px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: 'Inter', sans-serif;
+}
+
+.btn-ghost:hover {
+  border-color: #6366f1;
+  color: #a5b4fc;
+  background: var(--hover-bg);
+}
+
+/* ── Divider ── */
+.divider {
+  border: none;
+  height: 1px;
+  background: var(--border-l);
+  width: 100%;
+  max-width: 640px;
+  margin: 24px 0;
+}
+
+/* ── Empty state ── */
+.empty-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  width: 100%;
+  max-width: 640px;
+  margin-top: 28px;
+}
+
+.empty-card {
+  padding: 18px 14px;
+  border-radius: 11px;
+  border: 1px solid var(--border-l);
+  text-align: center;
+  background: var(--bg-cell);
+  transition: all 0.15s ease;
+}
+
+.empty-card:hover {
+  border-color: var(--border);
+  background: var(--hover-bg);
+}
+
+.empty-card-icon {
+  font-size: 1.4rem;
+  margin-bottom: 6px;
+}
+
+.empty-card-title {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+
+.empty-card-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* ── Result card ── */
+.result-card {
+  width: 100%;
+  max-width: 640px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-card);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  animation: fadeIn 0.25s ease;
+  margin-top: 24px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border-l);
+}
+
+.result-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.result-value {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  margin-top: 6px;
+  word-break: break-all;
+}
+
+.result-meta {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.tag-cached {
+  background: rgba(16,185,129,0.1);
+  color: #10b981;
+  border: 1px solid rgba(16,185,129,0.2);
+}
+
+.score-ring {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.score-number {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.score-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  margin-top: 1px;
+}
+
+.score-severity {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 3px;
+}
+
+/* Data grid in result card */
+.data-section {
+  padding: 4px 24px 18px 24px;
+}
+
+.data-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.data-cell {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--bg-cell);
+  border: 1px solid var(--border-l);
+}
+
+.data-cell-label {
+  font-size: 0.62rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.data-cell-value {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  word-break: break-all;
+}
+
+/* Tool row */
+.tool-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 24px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-l);
+  flex-wrap: wrap;
+}
+
+/* ── Footer ── */
+.footer {
+  text-align: center;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin-top: 40px;
+  padding-bottom: 20px;
+}
+
+.footer a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: #6366f1;
+}
+
+/* ── Batch section ── */
+.batch-section {
+  width: 100%;
+  max-width: 640px;
+}
+
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 28px;
+  text-align: center;
+  background: var(--bg-cell);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.dropzone:hover {
+  border-color: #6366f1;
+}
+
+.dropzone-icon {
+  font-size: 2rem;
+  margin-bottom: 8px;
+}
+
+.hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-header-icon">🛡️</span>
+      <span class="sidebar-header-title">IOC Enrichment</span>
+    </div>
+    <div class="sidebar-sub">Threat intelligence lookup for SOC analysts.</div>
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-title">Data Sources</div>
+
+    <div class="tool-item">
+      <span class="tool-dot ok"></span>
+      <div class="tool-info">
+        <div class="tool-name">ipinfo</div>
+        <div class="tool-desc">IP geolocation and network information</div>
+      </div>
+      <span class="tool-status ready">Ready</span>
+    </div>
+
+    <div class="tool-item">
+      <span class="tool-dot err"></span>
+      <div class="tool-info">
+        <div class="tool-name">abuseipdb</div>
+        <div class="tool-desc">IP abuse reports &amp; reputation</div>
+      </div>
+      <span class="tool-status missing">No API key</span>
+    </div>
+
+    <div class="tool-item">
+      <span class="tool-dot err"></span>
+      <div class="tool-info">
+        <div class="tool-name">virustotal</div>
+        <div class="tool-desc">Multi-engine malware detection</div>
+      </div>
+      <span class="tool-status missing">No API key</span>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-title">Appearance</div>
+    <select class="theme-select">
+      <option>💻 System</option>
+      <option>☀️ Light</option>
+      <option selected>🌙 Dark</option>
+    </select>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-title">Cache</div>
+    <div class="cache-info">
+      <strong>3</strong> entries · <strong>67%</strong> hit rate
+    </div>
+
+    <div class="sidebar-footer">Pipeline v1.0 · MIT License</div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-title">IOC Enrichment</div>
+    </div>
+    <div class="hero-subtitle">
+      Look up any IP, domain, file hash, or URL against multiple threat intelligence sources.
+      Get geolocation, abuse reports, malware detections, and a risk score — instantly.
+    </div>
+
+    <!-- Search -->
+    <div class="search-row">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" type="text" placeholder="Paste an IP, domain, hash, or URL — e.g. 8.8.8.8">
+      </div>
+      <button class="btn-primary">Look Up</button>
+    </div>
+
+    <!-- Chips -->
+    <div class="chips">
+      <span class="chips-label">Try:</span>
+      <span class="chip">8.8.8.8</span>
+      <span class="chip">5.188.62.38</span>
+      <span class="chip">iuqerfsodp9...</span>
+      <span class="chip">d41d8cd98f...</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="action-row">
+      <button class="btn-ghost">📂 Batch Upload</button>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Result card (example with real data) -->
+    <div class="result-card">
+      <div class="result-top">
+        <div>
+          <span class="result-badge" style="background:#0d1f17;color:#059669;border:1px solid #a7f3d0;">IP</span>
+          <div class="result-value">8.8.8.8</div>
+          <div class="result-meta">manual · ⏱ 0.52s</div>
+        </div>
+        <div style="text-align:center;flex-shrink:0;margin-left:16px;">
+          <div class="score-ring" style="background:#0d1f17;border:3px solid #a7f3d0;">
+            <div class="score-number" style="color:#059669;">4.0</div>
+            <div class="score-label">out of 10</div>
+          </div>
+          <div class="score-severity" style="color:#059669;background:#0d1f17;">low</div>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-grid">
+          <div class="data-cell">
+            <div class="data-cell-label">📍 Location</div>
+            <div class="data-cell-value">Mountain View, California, US</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">🌐 ISP</div>
+            <div class="data-cell-value">Google LLC</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">🔢 ASN</div>
+            <div class="data-cell-value">AS15169</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">🏳️ Country</div>
+            <div class="data-cell-value">US</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">🕐 Timezone</div>
+            <div class="data-cell-value">America/Los_Angeles</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">🖥️ Hostname</div>
+            <div class="data-cell-value">dns.google</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">⚠️ Abuse Score</div>
+            <div class="data-cell-value">0/100</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">📋 Reports</div>
+            <div class="data-cell-value">0</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">👥 Distinct Users</div>
+            <div class="data-cell-value">0</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">🦠 Malicious</div>
+            <div class="data-cell-value">0/90</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">⚠️ Suspicious</div>
+            <div class="data-cell-value">0</div>
+          </div>
+          <div class="data-cell">
+            <div class="data-cell-label">✅ Clean</div>
+            <div class="data-cell-value">88</div>
+          </div>
+        </div>
+        <div class="tool-row">
+          <span class="tool-dot ok"></span><span class="tool-name">ipinfo</span>
+          <span class="tool-dot ok"></span><span class="tool-name">abuseipdb</span>
+          <span class="tool-dot ok"></span><span class="tool-name">virustotal</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state (shown when no result yet) -->
+    <div class="empty-grid" id="emptyState">
+      <div class="empty-card">
+        <div class="empty-card-icon">🌐</div>
+        <div class="empty-card-title">IP Address</div>
+        <div class="empty-card-desc">Location, ISP, ASN, and whether it's from a risky country.</div>
+      </div>
+      <div class="empty-card">
+        <div class="empty-card-icon">🔗</div>
+        <div class="empty-card-title">Domain</div>
+        <div class="empty-card-desc">Registrar, DNS records, malware detections from 70+ engines.</div>
+      </div>
+      <div class="empty-card">
+        <div class="empty-card-icon">🔐</div>
+        <div class="empty-card-title">File Hash</div>
+        <div class="empty-card-desc">Scan results from VirusTotal — see which AV engines flagged it.</div>
+      </div>
+      <div class="empty-card">
+        <div class="empty-card-icon">🔗</div>
+        <div class="empty-card-title">URL</div>
+        <div class="empty-card-desc">Check if a link is malicious before you click it.</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      IOC Enrichment Pipeline ·
+      <a href="https://github.com/Tamerktb/ioc-enrichment-pipeline" target="_blank">GitHub</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// Chip clicks — fill the search box
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelector('.search-input').value = chip.textContent.trim();
+  });
+});
+
+// Toggle between result card view and empty state
+document.querySelector('.btn-primary').addEventListener('click', () => {
+  const resultCard = document.querySelector('.result-card');
+  const emptyState = document.getElementById('emptyState');
+  const isResultHidden = resultCard.style.display === 'none';
+  resultCard.style.display = isResultHidden ? 'block' : 'none';
+  emptyState.style.display = isResultHidden ? 'none' : 'grid';
+
+  // If showing result, update the search value
+  if (!isResultHidden) {
+    const val = document.querySelector('.search-input').value.trim();
+    if (val) {
+      document.querySelector('.result-value').textContent = val;
+    }
+  }
+});
+
+// Theme selector
+document.querySelector('.theme-select').addEventListener('change', function() {
+  if (this.value.includes('Light')) {
+    document.documentElement.style.setProperty('--bg', '#ffffff');
+    document.documentElement.style.setProperty('--bg-card', '#ffffff');
+    document.documentElement.style.setProperty('--bg-cell', '#f9fafb');
+    document.documentElement.style.setProperty('--border', '#e5e7eb');
+    document.documentElement.style.setProperty('--border-l', '#f3f4f6');
+    document.documentElement.style.setProperty('--text', '#111827');
+    document.documentElement.style.setProperty('--text-muted', '#6b7280');
+    document.documentElement.style.setProperty('--text-dim', '#d1d5db');
+    document.documentElement.style.setProperty('--input-bg', '#fafafa');
+    document.documentElement.style.setProperty('--placeholder', '#9ca3af');
+    document.documentElement.style.setProperty('--hover-bg', '#f3f4f6');
+  } else {
+    document.documentElement.style.setProperty('--bg', '#0d1117');
+    document.documentElement.style.setProperty('--bg-card', '#161b22');
+    document.documentElement.style.setProperty('--bg-cell', '#0d1117');
+    document.documentElement.style.setProperty('--border', '#30363d');
+    document.documentElement.style.setProperty('--border-l', '#21262d');
+    document.documentElement.style.setProperty('--text', '#e6edf3');
+    document.documentElement.style.setProperty('--text-muted', '#8b949e');
+    document.documentElement.style.setProperty('--text-dim', '#484f58');
+    document.documentElement.style.setProperty('--input-bg', '#0d1117');
+    document.documentElement.style.setProperty('--placeholder', '#6b7280');
+    document.documentElement.style.setProperty('--hover-bg', '#1c2128');
+  }
+});
+</script>
+
+</body>
+</html>

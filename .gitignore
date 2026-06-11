@@ -1,35 +1,31 @@
-# Byte-compiled / optimized / DLL files
+# IOC Enrichment Pipeline
+
+# Python cache / bytecode
 __pycache__/
 *.py[cod]
 *$py.class
 
-# Environment
-.env
-.env.local
+# Virtual environment
+venv/
+.venv/
+env/
 
-# Cache database
+# Environment variables (contains API keys)
+.env
+
+# SQLite cache database
 pipeline_cache.db
-pipeline_cache.db-wal
-pipeline_cache.db-shm
+*.db
+
+# OS junk
+.DS_Store
+Thumbs.db
 
 # Output directory
 output/
-*.report.json
-*.report.splunk
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Python
-*.egg-info/
-dist/
-build/
-*.whl
