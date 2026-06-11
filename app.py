@@ -24,7 +24,7 @@ st.set_page_config(
     page_title="IOC Enrichment — Threat Intelligence Lookup",
     page_icon="🛡️",
     layout="centered",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="auto",
 )
 
 # ── Theme ────────────────────────────────────────────────────────────────────
@@ -414,7 +414,7 @@ with col2:
     examples = [
         ("8.8.8.8", "Google DNS", ec1),
         ("5.188.62.38", "Russian IP", ec2),
-        ("iuqerfsodp9ifjaposdfjhgosurijfaewrwergwea.com", "Emotet C2", ec3),
+        ("iuqerfsodp9...", "Emotet C2", ec3),
         ("d41d8cd98f00...", "Empty hash", ec4),
     ]
     for val, label, col in examples:
