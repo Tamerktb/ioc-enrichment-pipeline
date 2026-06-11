@@ -65,7 +65,16 @@ This pipeline **automates the grunt work** — paste an IOC once, get a complete
 
 ## Quick Start (Web UI)
 
-### 3 steps 
+### 🖱️ Option A: Double-click the launcher (Windows)
+
+Just **double-click `launch.bat`** in the project folder.
+
+It installs everything automatically the first time, then opens the web
+interface at `http://localhost:8501`. No terminal, no commands.
+
+---
+
+### ⌨️ Option B: Terminal (any OS)
 
 **Step 1** — Open a terminal in the project folder:
 
@@ -82,7 +91,7 @@ Mac/Linux: cd /path/to/ioc-enrichment-pipeline
 pip install -r requirements.txt streamlit && streamlit run app.py
 ```
 
-Wait ~15 seconds. You'll see:
+**Step 3** — Open **http://localhost:8501** in your browser.
 
 ```
   You can now view your Streamlit app in your browser.
