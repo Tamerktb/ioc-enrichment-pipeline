@@ -1,0 +1,11 @@
+type,value,source,context
+ip,8.8.8.8,alerts,Google DNS — baseline benign
+ip,1.2.3.4,alerts,Suspicious inbound connection
+ip,185.130.5.173,threat_intel,C2 server from known malware campaign
+ip,45.33.32.156,threat_intel,Scanner activity observed
+domain,example.com,alerts,Likely benign test domain
+domain,malware.c2-server.com,threat_intel,Associated with Emotet campaign
+domain,evilphishing.xyz,phishing,Reported phishing landing page
+hash,e3b0c44298fc1c149afbf4c8996fb924,alerts,Suspicious file download — MD5 placeholder
+hash,d41d8cd98f00b204e9800998ecf8427e,alerts,Empty file hash — possible evasion attempt
+url,http://malware.example.com/payload.exe,threat_intel,Known malware download URL

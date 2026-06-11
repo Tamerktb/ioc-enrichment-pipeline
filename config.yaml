@@ -1,0 +1,42 @@
+# IOC Enrichment Pipeline Configuration
+
+cache:
+  path: pipeline_cache.db          # SQLite cache file path
+  default_ttl: 3600                # Default TTL in seconds (1 hour)
+  ttl_by_type:
+    ip: 3600                       # 1 hour
+    domain: 7200                   # 2 hours
+    hash: 86400                    # 24 hours
+    url: 3600                      # 1 hour
+
+enrichment:
+  timeout: 15                      # Per-API request timeout in seconds
+  max_retries: 3                   # Max retry attempts per tool
+  retry_base_delay: 2.0            # Base delay for exponential backoff (seconds)
+  parallel: true                   # Run enrichment tools concurrently
+
+scoring:
+  enabled: true
+  weights:
+    malicious_reports: 0.35        # Weight for malicious detection ratio
+    source_count: 0.20             # Weight for number of sources with data
+    abuse_reports: 0.25            # Weight for abuse report counts (AbuseIPDB)
+    geo_risk: 0.10                 # Weight for high-risk geolocation
+    freshness: 0.10                # Weight for recent IOC activity
+
+llm:
+  enabled: false                   # Enabled only when OPENROUTER_API_KEY is set
+  provider: openrouter
+  model: openai/gpt-4o-mini
+  max_tokens: 250
+  temperature: 0.3
+  prompt_template: |
+    You are a SOC analyst assistant. Given the following IOC enrichment data,
+    write a concise 2-3 sentence threat summary. Focus on: what kind of threat
+    this likely represents, how confident you are, and what action you recommend.
+    Be specific — reference the actual data (report counts, geolocation, etc.).
+
+output:
+  default_format: json             # json, splunk, or table
+  timestamp_format: iso            # iso or unix
+  output_dir: output/

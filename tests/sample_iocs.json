@@ -1,0 +1,6 @@
+[
+  {"value": "8.8.8.8", "type": "ip", "source": "alerts", "context": "Google DNS — baseline benign"},
+  {"value": "185.130.5.173", "type": "ip", "source": "threat_intel", "context": "C2 server from known malware campaign"},
+  {"value": "malware.c2-server.com", "type": "domain", "source": "threat_intel", "context": "Associated with Emotet campaign"},
+  {"value": "45.33.32.156", "type": "ip", "source": "threat_intel", "context": "Scanner activity observed"}
+]
