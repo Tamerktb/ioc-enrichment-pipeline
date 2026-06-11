@@ -65,7 +65,7 @@ This pipeline **automates the grunt work** — paste an IOC once, get a complete
 
 ## Quick Start (Web UI)
 
-### 3 steps — works no matter where you cloned it
+### 3 steps 
 
 **Step 1** — Open a terminal in the project folder:
 
