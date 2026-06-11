@@ -56,7 +56,7 @@ class AbuseIPDBTool(BaseTool):
             )
 
         if ioc_type != "ip":
-            return self.result_error(f"AbuseIPDB only supports 'ip' type, got '{ioc_type}'", time.time() - start)
+                    return self.result_success({"note": f"AbuseIPDB is IP-only — skipping {ioc_type} lookup"}, time.time() - start)
 
         try:
             max_age = kwargs.get("max_age_in_days", 30)

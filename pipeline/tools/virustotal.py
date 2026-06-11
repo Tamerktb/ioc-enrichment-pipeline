@@ -73,7 +73,20 @@ class VirusTotalTool(BaseTool):
                 return self.result_error("Invalid VirusTotal API key", time.time() - start)
 
             if response.status_code == 404:
-                return self.result_error(f"IOC not found in VirusTotal database", time.time() - start)
+                # Not in VT database — not an error, just unknown
+                return self.result_success({
+                    "ioc_type": ioc_type,
+                    "ioc_value": ioc_value,
+                    "malicious_detections": 0,
+                    "suspicious_detections": 0,
+                    "harmless": 0,
+                    "undetected": 0,
+                    "total_engines": 0,
+                    "detection_ratio": "0/0",
+                    "detected_by": [],
+                    "suspected_by": [],
+                    "note": "Not found in VirusTotal database — this indicator has never been submitted.",
+                }, time.time() - start)
 
             if response.status_code != 200:
                 return self.result_error(

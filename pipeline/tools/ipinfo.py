@@ -36,7 +36,7 @@ class IPInfoTool(BaseTool):
         try:
             # Validate only if ip — ipinfo only supports IPs
             if ioc_type != "ip":
-                return self.result_error(f"ipinfo only supports 'ip' type, got '{ioc_type}'", time.time() - start)
+                            return self.result_success({"note": f"ipinfo is IP-only — skipping {ioc_type} lookup"}, time.time() - start)
 
             response = self._request_with_retry("GET", f"https://ipinfo.io/{ioc_value}/json")
 

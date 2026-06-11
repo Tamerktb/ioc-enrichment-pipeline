@@ -84,18 +84,8 @@ class EnrichmentManager:
                 "latency": 0,
             }
 
-        # Validate before calling
-        errors = tool.validate(ioc_type=ioc_type, ioc_value=ioc_value, **kwargs)
-        if errors:
-            return {
-                "tool": tool_name,
-                "success": False,
-                "data": {},
-                "error": f"Validation failed: {'; '.join(errors)}",
-                "latency": 0,
-            }
-
-        # Execute
+        # Execute (validation happens inside each tool — unsupported
+        # types like domains on ipinfo return a graceful skip)
         start = time.time()
         try:
             result = tool.execute(ioc_type=ioc_type, ioc_value=ioc_value, **kwargs)

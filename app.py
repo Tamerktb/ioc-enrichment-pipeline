@@ -1,20 +1,14 @@
 """
 IOC Enrichment Pipeline — Professional Web UI
-
-Usage:
-    streamlit run app.py
-    # Opens at http://localhost:8501
-
-Designed to be self-explanatory — no training needed.
+streamlit run app.py → http://localhost:8501
 """
 
 import streamlit as st
 import sys
 import os
 import time
-from pathlib import Path
+from datetime import datetime
 
-# Ensure the project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
@@ -28,193 +22,161 @@ load_dotenv()
 
 # ── Page config ──────────────────────────────────────────────────────────────
 st.set_page_config(
-    page_title="IOC Enrichment Pipeline — Threat Intelligence Lookup",
+    page_title="IOC Enrichment — Threat Intelligence Lookup",
     page_icon="🛡️",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="collapsed",
 )
 
-# ── Custom CSS for professional look ─────────────────────────────────────────
+# ── CSS ──────────────────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Clean typography */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+    * { font-family: 'Inter', sans-serif; }
+
+    /* ── Remove Streamlit cruft ── */
+    #MainMenu, footer, header { visibility: hidden; }
+    .stApp { margin-top: -60px; }
+
+    /* ── Hero ── */
+    .brand {
+        display: flex; align-items: center; justify-content: center; gap: 12px;
+        margin: 60px 0 8px 0;
     }
-
-    /* Hero section */
-    .hero-title {
-        font-size: 2.4rem;
-        font-weight: 700;
-        margin-bottom: 0.3rem;
-        letter-spacing: -0.02em;
+    .brand-icon {
+        width: 42px; height: 42px; background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border-radius: 11px; display: flex; align-items: center; justify-content: center;
+        font-size: 1.3rem; color: white; box-shadow: 0 4px 14px rgba(99,102,241,0.25);
+    }
+    .brand-title {
+        font-size: 1.8rem; font-weight: 800; color: #111827;
+        letter-spacing: -0.03em;
     }
     .hero-subtitle {
-        font-size: 1.05rem;
-        color: #6b7280;
-        font-weight: 400;
-        margin-bottom: 2rem;
+        text-align: center; font-size: 1.05rem; color: #6b7280; margin-bottom: 32px;
+        line-height: 1.5;
     }
 
-    /* Input row */
-    .stTextInput > div > div > input {
-        font-size: 1.1rem !important;
-        padding: 14px 18px !important;
-        border-radius: 10px !important;
-        font-family: 'JetBrains Mono', monospace !important;
+    /* ── Search ── */
+    .search-wrapper {
+        max-width: 640px; margin: 0 auto; position: relative;
+    }
+    .search-box {
+        width: 100%; padding: 16px 20px 16px 48px; font-size: 1.05rem;
+        border: 2px solid #e5e7eb; border-radius: 14px; outline: none;
+        font-family: 'JetBrains Mono', monospace; background: #fafafa;
+        transition: all 0.2s; box-sizing: border-box;
+    }
+    .search-box:focus {
+        border-color: #6366f1; background: white; box-shadow: 0 0 0 4px rgba(99,102,241,0.08);
+    }
+    .search-box::placeholder { color: #c4c4c4; font-family: 'Inter', sans-serif; }
+    .search-icon {
+        position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+        font-size: 1.1rem; color: #9ca3af; pointer-events: none;
     }
 
-    /* Enrich button */
-    div.stButton > button {
-        font-size: 1.05rem !important;
-        font-weight: 600 !important;
-        padding: 12px 28px !important;
-        border-radius: 10px !important;
-        height: auto !important;
+    /* ── Examples ── */
+    .examples-row {
+        text-align: center; margin-top: 14px;
     }
+    .example-chip {
+        display: inline-block; padding: 7px 16px; margin: 4px;
+        border-radius: 100px; font-size: 0.82rem; font-weight: 500;
+        border: 1px solid #e5e7eb; color: #374151; background: white;
+        cursor: pointer; transition: all 0.15s;
+    }
+    .example-chip:hover { background: #f9fafb; border-color: #6366f1; color: #6366f1; }
 
-    /* Example chips */
-    .chip {
-        display: inline-block;
-        padding: 6px 14px;
-        margin: 0 6px 6px 0;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        cursor: pointer;
-        border: 1px solid #d1d5db;
-        background: transparent;
-        color: #374151;
-        transition: all 0.15s;
-    }
-    .chip:hover {
-        background: #f3f4f6;
-        border-color: #9ca3af;
-    }
-
-    /* Result card */
+    /* ── Result card ── */
     .result-card {
-        border: 1px solid #e5e7eb;
-        border-radius: 14px;
-        padding: 28px 32px;
-        margin: 24px 0;
-        background: #ffffff;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+        max-width: 640px; margin: 28px auto; border: 1px solid #e5e7eb;
+        border-radius: 16px; overflow: hidden; background: white;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.03);
     }
-    .result-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 24px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid #f3f4f6;
+    .result-top {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 22px 26px; border-bottom: 1px solid #f3f4f6;
     }
-    .result-ioc-type {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
+    .result-type-badge {
+        display: inline-block; padding: 3px 10px; border-radius: 6px;
+        font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
         letter-spacing: 0.06em;
-        color: #6b7280;
-        margin-bottom: 4px;
     }
-    .result-ioc-value {
-        font-size: 1.35rem;
-        font-weight: 600;
-        color: #111827;
-        font-family: 'JetBrains Mono', monospace;
+    .result-value {
+        font-size: 1.25rem; font-weight: 700; color: #111827;
+        font-family: 'JetBrains Mono', monospace; margin-top: 6px;
     }
-    .result-badge {
-        display: inline-block;
-        padding: 5px 14px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+    .result-meta { font-size: 0.78rem; color: #9ca3af; margin-top: 4px; }
+    .score-ring {
+        width: 72px; height: 72px; border-radius: 50%; display: flex;
+        flex-direction: column; align-items: center; justify-content: center;
+        font-weight: 800; flex-shrink: 0;
     }
-    .result-score {
-        font-size: 2.2rem;
-        font-weight: 700;
-        line-height: 1;
-    }
-    .result-score-label {
-        font-size: 0.8rem;
-        color: #9ca3af;
-        text-align: center;
-        margin-top: 2px;
+    .score-number { font-size: 1.5rem; line-height: 1; }
+    .score-label { font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; }
+    .score-severity {
+        display: inline-block; padding: 2px 10px; border-radius: 4px;
+        font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.05em; margin-top: 2px;
     }
 
-    /* Data grid */
-    .data-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-        gap: 16px;
+    /* ── Data grid ── */
+    .data-section { padding: 8px 26px 22px 26px; }
+    .data-section-title {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.07em; color: #9ca3af; margin: 16px 0 10px 0;
+        padding-bottom: 6px; border-bottom: 1px solid #f9fafb;
     }
-    .data-item {
-        padding: 14px 16px;
-        border-radius: 10px;
-        background: #f9fafb;
+    .data-grid {
+        display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+    }
+    .data-cell {
+        padding: 12px 14px; border-radius: 10px; background: #f9fafb;
         border: 1px solid #f3f4f6;
     }
-    .data-item-label {
-        font-size: 0.72rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: #9ca3af;
-        margin-bottom: 5px;
+    .data-cell-label {
+        font-size: 0.66rem; font-weight: 600; text-transform: uppercase;
+        letter-spacing: 0.05em; color: #9ca3af; margin-bottom: 3px;
     }
-    .data-item-value {
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: #111827;
+    .data-cell-value {
+        font-size: 0.88rem; font-weight: 500; color: #111827;
+        word-break: break-all;
     }
 
-    /* Tool status badge */
-    .tool-badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.78rem;
-        font-weight: 500;
-        margin: 0 6px 6px 0;
+    /* ── Tool indicator ── */
+    .tool-row {
+        display: flex; align-items: center; gap: 8px; padding: 8px 26px;
+        font-size: 0.78rem; color: #6b7280; border-top: 1px solid #f9fafb;
     }
-    .tool-badge.active {
-        background: #ecfdf5;
-        color: #065f46;
-        border: 1px solid #a7f3d0;
-    }
-    .tool-badge.inactive {
-        background: #fef3c7;
-        color: #92400e;
-        border: 1px solid #fde68a;
-    }
-    .tool-dot {
-        width: 7px;
-        height: 7px;
-        border-radius: 50%;
-        display: inline-block;
-    }
-    .tool-dot.green { background: #10b981; }
-    .tool-dot.amber { background: #f59e0b; }
+    .tool-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .tool-dot.ok { background: #10b981; }
+    .tool-dot.warn { background: #f59e0b; }
+    .tool-dot.err { background: #ef4444; }
 
-    /* Sidebar */
-    section[data-testid="stSidebar"] {
-        background: #fafafa;
-        border-right: 1px solid #e5e7eb;
+    /* ── Empty state ── */
+    .empty-state {
+        text-align: center; padding: 48px 20px;
     }
+    .empty-grid {
+        display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+        max-width: 640px; margin: 32px auto 0 auto;
+    }
+    .empty-card {
+        padding: 20px 16px; border-radius: 12px; border: 1px solid #f3f4f6;
+        text-align: center; background: #fafafa;
+    }
+    .empty-card-icon { font-size: 1.5rem; margin-bottom: 8px; }
+    .empty-card-title { font-size: 0.82rem; font-weight: 700; color: #111827; margin-bottom: 4px; }
+    .empty-card-desc { font-size: 0.72rem; color: #9ca3af; line-height: 1.4; }
 
-    /* Footer */
-    .footer-meta {
-        font-size: 0.78rem;
-        color: #d1d5db;
-        text-align: center;
-        margin-top: 10px;
-    }
+    /* ── Sidebar ── */
+    section[data-testid="stSidebar"] { background: #fafafa; border-right: 1px solid #e5e7eb; }
+
+    /* ── Footer ── */
+    .footer { text-align: center; font-size: 0.72rem; color: #d1d5db; margin-top: 48px; padding-bottom: 24px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,362 +187,278 @@ from pipeline.ioc_parser import IOC, IOCParser
 
 @st.cache_resource
 def get_orchestrator():
-    config_path = "config.yaml"
     config = {}
-    if os.path.exists(config_path):
-        with open(config_path) as f:
+    if os.path.exists("config.yaml"):
+        with open("config.yaml") as f:
             config = yaml.safe_load(f) or {}
     return PipelineOrchestrator(config)
 
 
 orchestrator = get_orchestrator()
 
-# ── Severity styling ─────────────────────────────────────────────────────────
-SEVERITY_CONFIG = {
-    "critical": {"color": "#dc2626", "bg": "#fef2f2", "border": "#fecaca", "label": "Critical"},
-    "high":     {"color": "#ea580c", "bg": "#fff7ed", "border": "#fed7aa", "label": "High"},
-    "medium":   {"color": "#d97706", "bg": "#fffbeb", "border": "#fde68a", "label": "Medium"},
-    "low":      {"color": "#059669", "bg": "#ecfdf5", "border": "#a7f3d0", "label": "Low"},
-    "none":     {"color": "#6b7280", "bg": "#f9fafb", "border": "#e5e7eb", "label": "None"},
-    "error":    {"color": "#dc2626", "bg": "#fef2f2", "border": "#fecaca", "label": "Error"},
+# ── Helpers ──────────────────────────────────────────────────────────────────
+SEVERITY = {
+    "critical": {"color": "#dc2626", "bg": "#fef2f2", "ring": "#fecaca"},
+    "high":     {"color": "#ea580c", "bg": "#fff7ed", "ring": "#fed7aa"},
+    "medium":   {"color": "#d97706", "bg": "#fffbeb", "ring": "#fde68a"},
+    "low":      {"color": "#059669", "bg": "#ecfdf5", "ring": "#a7f3d0"},
+    "none":     {"color": "#6b7280", "bg": "#f9fafb", "ring": "#e5e7eb"},
 }
 
 
-def build_result_html(result: dict) -> str:
-    """Build a single clean, professional result card."""
+def tool_has_key(name: str) -> bool:
+    if name == "ipinfo":
+        return True  # always available
+    return bool(os.getenv(f"{name.upper()}_API_KEY", ""))
+
+
+def tool_status(name: str) -> str:
+    if tool_has_key(name):
+        return "ok"
+    return "warn"
+
+
+def build_result(result: dict) -> str:
     ioc = result["ioc"]
     score = result.get("score", {})
     results = result.get("results", {})
-    was_cached = result.get("was_cached", False)
-    elapsed = result.get("elapsed", 0)
 
     score_val = score.get("score", 0)
-    severity = score.get("severity", "none")
-    cfg = SEVERITY_CONFIG.get(severity, SEVERITY_CONFIG["none"])
+    sev = score.get("severity", "none")
+    cfg = SEVERITY.get(sev, SEVERITY["none"])
+    elapsed = result.get("elapsed", 0)
 
-    # ── Build data rows ──────────────────────────────────────────────────
-    data_rows = ""
+    # ── Data cells ──
+    cells = []
 
-    for tool_name in ["ipinfo", "abuseipdb", "virustotal"]:
-        tr = results.get(tool_name, {})
-        if not tr.get("success") or not tr.get("data"):
-            continue
-        data = tr["data"]
+    # ipinfo
+    if results.get("ipinfo", {}).get("success"):
+        d = results["ipinfo"]["data"]
+        loc = ", ".join(filter(None, [d.get("city"), d.get("region"), d.get("country")]))
+        risk = "⚠️ High-risk country" if d.get("high_risk_country") else ""
+        cells += [
+            ("📍 Location", loc or "Unknown"),
+            ("🌐 ISP", d.get("isp", "—")),
+            ("🔢 ASN", d.get("asn", "—")),
+            ("🏳️ Country", f"{d.get('country', '?')} {risk}".strip()),
+            ("🕐 Timezone", d.get("timezone", "—")),
+            ("🖥️ Hostname", d.get("hostname") or "—"),
+        ]
 
-        if tool_name == "ipinfo":
-            location_parts = [p for p in [data.get("city"), data.get("region"), data.get("country")] if p]
-            location = ", ".join(location_parts) if location_parts else "Unknown"
+    # abuseipdb
+    if results.get("abuseipdb", {}).get("success"):
+        d = results["abuseipdb"]["data"]
+        cells += [
+            ("⚠️ Abuse Score", f"{d.get('abuse_confidence_score', 0)}/100"),
+            ("📋 Reports", str(d.get("total_reports", 0))),
+            ("👥 Distinct Users", str(d.get("num_distinct_users", 0))),
+            ("🏳️ Country", d.get("country_name", "—")),
+            ("🏢 ISP", d.get("isp", "—")),
+            ("📅 Last Reported", str(d.get("last_reported_at") or "—")),
+        ]
 
-            items = [
-                ("📍 Location", location),
-                ("🌐 ISP", data.get("isp", "Unknown")),
-                ("🔢 ASN", data.get("asn", "Unknown")),
-                ("🏳️ Country", f"{data.get('country', '?')} {'⚠️ High-risk' if data.get('high_risk_country') else ''}"),
-                ("🕐 Timezone", data.get("timezone", "Unknown")),
-                ("🖥️ Hostname", data.get("hostname") or "None"),
-            ]
-        elif tool_name == "abuseipdb":
-            items = [
-                ("⚠️ Abuse Score", f"{data.get('abuse_confidence_score', 0)} / 100"),
-                ("📋 Total Reports", str(data.get("total_reports", 0))),
-                ("👥 Distinct Users", str(data.get("num_distinct_users", 0))),
-                ("🏳️ Country", data.get("country_name", "Unknown")),
-                ("🏢 ISP", data.get("isp", "Unknown")),
-                ("📅 Last Reported", str(data.get("last_reported_at") or "Unknown")),
-            ]
-        elif tool_name == "virustotal":
-            items = [
-                ("🦠 Malicious", f"{data.get('malicious_detections', 0)} / {data.get('total_engines', 0)} engines"),
-                ("⚠️ Suspicious", str(data.get("suspicious_detections", 0))),
-                ("✅ Harmless", str(data.get("harmless", 0))),
-                ("🏳️ Country", data.get("country", "Unknown")),
-                ("🏷️ Reputation", str(data.get("reputation", 0))),
-            ]
-        else:
-            continue
+    # virustotal
+    if results.get("virustotal", {}).get("success"):
+        d = results["virustotal"]["data"]
+        cells += [
+            ("🦠 Malicious", f"{d.get('malicious_detections', 0)}/{d.get('total_engines', 0)}"),
+            ("⚠️ Suspicious", str(d.get("suspicious_detections", 0))),
+            ("✅ Clean", str(d.get("harmless", 0))),
+            ("🏳️ Country", d.get("country", "—")),
+            ("🏷️ Reputation", str(d.get("reputation", "—"))),
+        ]
 
-        for label, value in items:
-            data_rows += f"""
-            <div class="data-item">
-                <div class="data-item-label">{label}</div>
-                <div class="data-item-value">{value}</div>
-            </div>"""
+    # Build cells HTML
+    cells_html = ""
+    for label, value in cells:
+        cells_html += f"""
+        <div class="data-cell">
+            <div class="data-cell-label">{label}</div>
+            <div class="data-cell-value">{value}</div>
+        </div>"""
 
-    meta = ""
-    if was_cached:
-        meta += " ⚡ From cache"
-    if elapsed:
-        meta += f" · ⏱ {elapsed}s"
+    # Tool status row
+    tool_row = ""
+    for name in ["ipinfo", "abuseipdb", "virustotal"]:
+        tr = results.get(name, {})
+        status = "ok" if tr.get("success") else ("warn" if tr.get("error") else "err")
+        tool_row += f'<span class="tool-dot {status}"></span> {name} '
 
-    source_info = f"{ioc.source}"
+    # Source info
+    source = ioc.source
     if ioc.context:
-        source_info += f" — {ioc.context}"
+        source += f" — {ioc.context}"
+    meta = f"{source} · ⏱ {elapsed:.2f}s"
+    if result.get("was_cached"):
+        meta += " · ⚡ cached"
 
-    html = f"""
+    return f"""
     <div class="result-card">
-        <div class="result-header">
+        <div class="result-top">
             <div>
-                <div class="result-ioc-type">{ioc.type}</div>
-                <div class="result-ioc-value">{ioc.value}</div>
-                <div style="margin-top:6px;font-size:0.8rem;color:#9ca3af;">
-                    Source: {source_info}{meta}
-                </div>
+                <span class="result-type-badge" style="background:{cfg['bg']};color:{cfg['color']};border:1px solid {cfg['ring']};">{ioc.type}</span>
+                <div class="result-value">{ioc.value}</div>
+                <div class="result-meta">{meta}</div>
             </div>
-            <div style="text-align:right;">
-                <div style="margin-bottom:4px;">
-                    <span class="result-badge" style="color:{cfg['color']};background:{cfg['bg']};border:1px solid {cfg['border']};">
-                        {cfg['label']}
-                    </span>
+            <div style="text-align:center;">
+                <div class="score-ring" style="background:{cfg['bg']};border:3px solid {cfg['ring']};">
+                    <div class="score-number" style="color:{cfg['color']};">{score_val:.1f}</div>
+                    <div class="score-label">out of 10</div>
                 </div>
-                <div class="result-score" style="color:{cfg['color']};">
-                    {score_val:.1f}
-                </div>
-                <div class="result-score-label">out of 10</div>
+                <div class="score-severity" style="color:{cfg['color']};background:{cfg['bg']};">{sev}</div>
             </div>
         </div>
-        <div class="data-grid">
-            {data_rows}
+        <div class="data-section">
+            <div class="data-grid">{cells_html}</div>
+            <div class="tool-row">{tool_row}</div>
         </div>
-    </div>
-    """
-    return html
+    </div>"""
 
-
-# ── Example IOCs for quick lookup ────────────────────────────────────────────
-EXAMPLES = [
-    ("8.8.8.8", "Google DNS"),
-    ("185.130.5.173", "Known C2 server"),
-    ("45.33.32.156", "Scanner activity"),
-    ("1.1.1.1", "Cloudflare DNS"),
-]
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.markdown("### 🛡️ IOC Enrichment")
-    st.caption("Threat intelligence lookup for security analysts.")
+    st.caption("Instant threat intel for IPs, domains, hashes, and URLs.")
 
     st.markdown("---")
+    st.markdown("#### Data Sources")
 
-    st.markdown("#### Tools Available")
-    tools = orchestrator.manager.available_tools
-
-    for name, desc in tools.items():
-        needs_key = name in ("virustotal", "abuseipdb")
-        has_key = bool(os.getenv(f"{name.upper()}_API_KEY", "")) if needs_key else True
-
-        if has_key:
-            badge = f'<span class="tool-badge active"><span class="tool-dot green"></span> {name}</span>'
-        else:
-            badge = f'<span class="tool-badge inactive"><span class="tool-dot amber"></span> {name} (needs key)</span>'
-
-        st.markdown(badge, unsafe_allow_html=True)
-        st.caption(desc[:80])
-
-    st.markdown("---")
-    st.markdown("#### How it works")
-    st.caption(
-        "1. Type an IP, domain, or hash\n"
-        "2. The pipeline checks threat databases\n"
-        "3. You get a risk score and details\n\n"
-        "No API keys needed for basic IP lookups."
-    )
+    for name, desc in orchestrator.manager.available_tools.items():
+        has = tool_has_key(name)
+        icon = "●" if has else "○"
+        color = "#10b981" if has else "#d1d5db"
+        st.markdown(
+            f'<span style="color:{color};font-weight:600;">{icon}</span> '
+            f'<span style="font-size:0.85rem;font-weight:600;">{name}</span>'
+            f'{" <span style=font-size:0.7rem;color:#9ca3af;>— needs key</span>" if not has else ""}',
+            unsafe_allow_html=True,
+        )
+        st.caption(desc[:72] if len(desc) > 72 else desc)
 
     st.markdown("---")
     st.caption("Pipeline v1.0 · MIT License")
 
-# ── Hero ─────────────────────────────────────────────────────────────────────
-st.markdown(
-    '<div class="hero-title">Look up any IP, domain, or file hash</div>',
-    unsafe_allow_html=True,
-)
-st.markdown(
-    '<div class="hero-subtitle">'
-    'Paste an indicator and get instant threat intelligence — geolocation, abuse reports, '
-    'malware detections, and a risk score.'
-    '</div>',
-    unsafe_allow_html=True,
-)
+# ── Main ─────────────────────────────────────────────────────────────────────
+col1, col2, col3 = st.columns([1, 3, 1])
+with col2:
+    # Brand
+    st.markdown("""
+    <div class="brand">
+        <div class="brand-icon">🛡️</div>
+        <div class="brand-title">IOC Enrichment</div>
+    </div>
+    <div class="hero-subtitle">
+        Look up any IP address, domain, file hash, or URL.<br>
+        Get geolocation, abuse reports, malware detections, and a risk score — instantly.
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── Search row ───────────────────────────────────────────────────────────────
-col_input, col_button = st.columns([5, 1])
-
-with col_input:
+    # ── Search input ─────────────────────────────────────────────────────────
+    st.markdown('<div class="search-wrapper">', unsafe_allow_html=True)
     ioc_value = st.text_input(
-        "indicator_value",
-        placeholder="Paste an IP, domain, or hash here — e.g. 8.8.8.8 or evil.com",
+        "search",
+        placeholder="Paste an IP, domain, or hash — e.g. 8.8.8.8, evil.com, d41d8cd9...",
         label_visibility="collapsed",
-        key="main_input",
+        key="search",
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 
-with col_button:
-    enrich_clicked = st.button("Look Up", type="primary", use_container_width=True)
+    # ── Buttons ──────────────────────────────────────────────────────────────
+    bc1, bc2 = st.columns([1, 1])
+    with bc1:
+        go = st.button("Look Up", type="primary", use_container_width=True)
+    with bc2:
+        batch = st.button("Upload File Instead", use_container_width=True)
 
-# ── Example chips ────────────────────────────────────────────────────────────
-st.markdown(
-    '<div style="margin-top:4px;margin-bottom:8px;">'
-    '<span style="font-size:0.8rem;color:#9ca3af;margin-right:8px;">Try an example:</span>'
-    '</div>',
-    unsafe_allow_html=True,
-)
+    # ── Example chips ────────────────────────────────────────────────────────
+    st.markdown('<div class="examples-row">', unsafe_allow_html=True)
+    st.caption("Try an example:")
+    ec1, ec2, ec3, ec4 = st.columns(4)
+    examples = {
+        "8.8.8.8": ("Google DNS", ec1),
+        "5.188.62.38": ("Russian IP", ec2),
+        "d41d8cd98f00...": ("Empty hash", ec3),
+        "evil.com": ("Domain", ec4),
+    }
+    clicked = None
+    for val, (label, col) in examples.items():
+        with col:
+            if st.button(val, key=f"ex_{val}", help=label, use_container_width=True):
+                clicked = val
 
-example_cols = st.columns(len(EXAMPLES))
-clicked_example = None
+    st.markdown('</div>', unsafe_allow_html=True)
 
-for i, (example_val, example_desc) in enumerate(EXAMPLES):
-    with example_cols[i]:
-        if st.button(
-            f"{example_val}\n{example_desc}",
-            key=f"ex_{i}",
-            use_container_width=True,
-            help=f"Look up {example_val} ({example_desc})",
-        ):
-            clicked_example = example_val
+    # ── Divider ──────────────────────────────────────────────────────────────
+    st.markdown("<hr style='margin:28px 0;border-color:#f3f4f6;'>", unsafe_allow_html=True)
 
-# If an example chip was clicked, use its value
-if clicked_example:
-    ioc_value = clicked_example
-    enrich_clicked = True
+    # ── Execute ──────────────────────────────────────────────────────────────
+    if clicked:
+        ioc_value = clicked
 
-# ── Divider ──────────────────────────────────────────────────────────────────
-st.markdown('<hr style="margin:24px 0;border-color:#f3f4f6;">', unsafe_allow_html=True)
+    if go and ioc_value:
+        with st.spinner("Looking up..."):
+            try:
+                detected = IOCParser.detect_type(ioc_value.strip())
+                ioc = IOC(type=detected, value=ioc_value.strip())
+                result = orchestrator.process_ioc(ioc)
+                st.markdown(build_result(result), unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Could not process this indicator: {e}")
 
-# ── Enrichment logic ─────────────────────────────────────────────────────────
-if enrich_clicked and ioc_value:
-    with st.spinner(f"Looking up {ioc_value}..."):
-        try:
-            # Auto-detect type
-            detected = IOCParser.detect_type(ioc_value.strip())
-            ioc = IOC(type=detected, value=ioc_value.strip())
+    elif go and not ioc_value:
+        st.warning("Type something in the search box above.")
 
-            result = orchestrator.process_ioc(ioc, use_llm=False)
+    # ── Empty state ──────────────────────────────────────────────────────────
+    if not go and not clicked and not batch:
+        st.markdown("""
+        <div class="empty-grid">
+            <div class="empty-card">
+                <div class="empty-card-icon">🌐</div>
+                <div class="empty-card-title">IP Address</div>
+                <div class="empty-card-desc">Location, ISP, ASN, and whether it's from a risky country.</div>
+            </div>
+            <div class="empty-card">
+                <div class="empty-card-icon">🔗</div>
+                <div class="empty-card-title">Domain</div>
+                <div class="empty-card-desc">Registrar, DNS records, and malware detections from 70+ engines.</div>
+            </div>
+            <div class="empty-card">
+                <div class="empty-card-icon">🔐</div>
+                <div class="empty-card-title">File Hash</div>
+                <div class="empty-card-desc">Scan results from VirusTotal — see which AV engines flagged it.</div>
+            </div>
+            <div class="empty-card">
+                <div class="empty-card-icon">🔗</div>
+                <div class="empty-card-title">URL</div>
+                <div class="empty-card-desc">Check if a link is malicious before you click it.</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-            # Render result
-            html = build_result_html(result)
-            st.markdown(html, unsafe_allow_html=True)
+    # ── Batch upload (conditionally shown) ───────────────────────────────────
+    if batch:
+        st.markdown("---")
+        st.markdown("### 📂 Batch Processing")
+        st.caption("Upload a CSV file with columns: type, value, source, context")
 
-            # Show which tools returned what
-            with st.expander("📊 View raw enrichment data"):
-                for tool_name, tr in result.get("results", {}).items():
-                    success = tr.get("success")
-                    icon = "✅" if success else "❌"
-                    st.caption(f"{icon} **{tool_name}** — {tr.get('latency', 0):.2f}s")
-                    if success and tr.get("data"):
-                        st.json(tr["data"])
-                    elif tr.get("error"):
-                        st.caption(f"_{tr['error']}_")
-
-        except Exception as e:
-            st.error(f"Could not look up this indicator. {e}")
-
-elif enrich_clicked and not ioc_value:
-    st.warning("⚠️ Type or paste something above first.")
-
-# ── Empty state guidance ─────────────────────────────────────────────────────
-if not enrich_clicked:
-    st.markdown("### What can you look up?")
-
-    guide_col1, guide_col2, guide_col3, guide_col4 = st.columns(4)
-
-    with guide_col1:
-        st.markdown(
-            """
-            **IP Address**
-            
-            Any IPv4 address.
-            
-            Gets you: location, ISP,
-            ASN, timezone, and whether
-            it's from a risky country.
-            
-            *Example: 8.8.8.8*
-            """
-        )
-
-    with guide_col2:
-        st.markdown(
-            """
-            **Domain Name**
-            
-            Websites and servers.
-            
-            (Needs API key for full
-            results — without one,
-            only basic info is shown.)
-            
-            *Example: evil.com*
-            """
-        )
-
-    with guide_col3:
-        st.markdown(
-            """
-            **File Hash**
-            
-            MD5, SHA-1, or SHA-256.
-            
-            (Needs API key to check
-            against 70+ antivirus
-            engines via VirusTotal.)
-            
-            *Example: d41d8cd9...*
-            """
-        )
-
-    with guide_col4:
-        st.markdown(
-            """
-            **URL**
-            
-            Full web addresses.
-            
-            (Needs API key for
-            VirusTotal URL scan.)
-            
-            *Example: http://...*
-            """
-        )
-
-    st.markdown("---")
-
-# ── Batch upload ─────────────────────────────────────────────────────────────
-with st.expander("📂 Upload a file with multiple indicators (batch processing)"):
-    st.markdown(
-        "Upload a CSV or JSON file. Each indicator will be looked up automatically. "
-        "Your file should have columns: **type**, **value**, **source**, **context**."
-    )
-
-    sample_csv = """type,value,source,context
+        st.code("""type,value,source,context
 ip,8.8.8.8,alerts,Google DNS
 ip,185.130.5.173,threat_intel,C2 server
-domain,evilphishing.xyz,phishing,Reported phishing"""
+domain,evilphishing.xyz,phishing,Suspicious""", language="csv")
 
-    st.code(sample_csv, language="csv")
+        uploaded = st.file_uploader("Choose file", type=["csv", "json"], label_visibility="collapsed")
+        if uploaded:
+            path = f"/tmp/{uploaded.name}"
+            with open(path, "wb") as f:
+                f.write(uploaded.getbuffer())
+            with st.spinner("Processing..."):
+                try:
+                    batch_results = orchestrator.process_file(path)
+                    st.success(f"Done — {len(batch_results)} indicators processed")
+                    for r in batch_results:
+                        st.markdown(build_result(r), unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(str(e))
 
-    uploaded_file = st.file_uploader(
-        "Choose a CSV or JSON file",
-        type=["csv", "json"],
-        label_visibility="collapsed",
-    )
-
-    if uploaded_file:
-        temp_path = f"/tmp/uploaded_{uploaded_file.name}"
-        with open(temp_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-
-        with st.spinner(f"Processing {uploaded_file.name}..."):
-            try:
-                results = orchestrator.process_file(temp_path)
-                st.success(f"Done — processed {len(results)} indicators")
-
-                for result in results:
-                    html = build_result_html(result)
-                    st.markdown(html, unsafe_allow_html=True)
-
-            except Exception as e:
-                st.error(f"Error reading file: {e}")
-
-# ── Footer ───────────────────────────────────────────────────────────────────
-st.markdown(
-    '<div class="footer-meta">IOC Enrichment Pipeline v1.0 — MIT License</div>',
-    unsafe_allow_html=True,
-)
+    # ── Footer ───────────────────────────────────────────────────────────────
+    st.markdown('<div class="footer">IOC Enrichment Pipeline v1.0</div>', unsafe_allow_html=True)
