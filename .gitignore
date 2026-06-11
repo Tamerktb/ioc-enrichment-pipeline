@@ -1,26 +1,35 @@
-# Environment
-.env
-*.db
-
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-*.so
-*.egg-info/
-dist/
-build/
 
-# Output
+# Environment
+.env
+.env.local
+
+# Cache database
+pipeline_cache.db
+pipeline_cache.db-wal
+pipeline_cache.db-shm
+
+# Output directory
 output/
-enrichment_report_*.json
+*.report.json
+*.report.splunk
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
 
 # OS
 .DS_Store
 Thumbs.db
+
+# Python
+*.egg-info/
+dist/
+build/
+*.whl
