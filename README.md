@@ -65,46 +65,62 @@ This pipeline **automates the grunt work** — paste an IOC once, get a complete
 
 ## Quick Start (Web UI)
 
-### 3 steps — no commands to memorize
+### 3 steps — works no matter where you cloned it
 
-**Step 1** — Open a terminal (`Win + R` → type `cmd` → Enter)
+**Step 1** — Open a terminal in the project folder:
 
-**Step 2** — Paste this one command and press Enter:
+```
+Windows:  Right-click the project folder → "Open in Terminal"
+          Or: Win + R → cmd → cd \path\to\ioc-enrichment-pipeline
+
+Mac/Linux: cd /path/to/ioc-enrichment-pipeline
+```
+
+**Step 2** — Install and launch (one command):
 
 ```bash
-cd "D:\IOC Enrichment Pipeline" && pip install -r requirements.txt streamlit && streamlit run app.py
+pip install -r requirements.txt streamlit && streamlit run app.py
 ```
 
-Wait ~15 seconds. It will say something like "You can now view your app at http://localhost:8501"
-
-**Step 3** — Open your browser and go to **http://localhost:8501**
-
-You'll see a web interface with 3 tabs:
-
-| Tab | What it does |
-|---|---|
-| 🎯 **Single IOC** | Type an IP/domain/hash → click **Enrich** → see results instantly |
-| 📂 **Batch File** | Upload a CSV file → enrich multiple IOCs at once |
-| 📊 **Cache & Stats** | View cache hit rates and tool usage stats |
-
-### Example using the Web UI
+Wait ~15 seconds. You'll see:
 
 ```
-1. Go to http://localhost:8501
-2. Type "8.8.8.8" in the IOC Value box
-3. Click "Enrich"
-4. See a card with:
-   ┌─────────────────────────────────────────┐
-   │ IP  8.8.8.8                   3.97/10  │
-   │          LOW                           │
-   │ Source: manual | Context: N/A          │
-   │ ┌─────────────────────────────────────┐ │
-   │ │ ✅ IPINFO (0.34s)                  │ │
-   │ │ Location: Mountain View, CA, US    │ │
-   │ │ ISP: Google LLC  ASN: AS15169      │ │
-   │ └─────────────────────────────────────┘ │
-   └─────────────────────────────────────────┘
+  You can now view your Streamlit app in your browser.
+
+  Local URL: http://localhost:8501
 ```
+
+**Step 3** — Open **http://localhost:8501** in your browser.
+
+### How to use the Web UI
+
+The interface is self-explanatory — here's what you'll see:
+
+1. **A search box** — paste any IP address, domain, or file hash
+2. **Example buttons** — click one to try it instantly (no typing needed)
+3. **"Look Up" button** — click it and results appear in under a second
+
+**What you get back:**
+
+```
+┌──────────────────────────────────────────────────────┐
+│  IP                            ┌─────────┐          │
+│  8.8.8.8                       │   LOW   │          │
+│  Source: manual · ⏱ 0.37s     │  3.97   │          │
+│                                │ out of 10│          │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
+│  │📍Location│ │🌐 ISP    │ │🔢 ASN   │ │🏳️Country│ │
+│  │Mountain  │ │Google LLC│ │AS15169  │ │US       │ │
+│  │View, CA  │ │          │ │         │ │         │ │
+│  └──────────┘ └──────────┘ └──────────┘ └────────┘ │
+└──────────────────────────────────────────────────────┘
+```
+
+- **Risk score** (0–10) with color-coded severity badge
+- **Location, ISP, ASN, country** — all in a clean card
+- **"View raw data"** expander — for power users who want the full JSON
+
+**Batch upload:** Click "Upload a file" at the bottom to process a CSV with multiple indicators at once.
 
 ### (Optional) Add API keys for more data
 
