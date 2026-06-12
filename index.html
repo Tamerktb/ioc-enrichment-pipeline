@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IOC Enrichment — Threat Intelligence Lookup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ── Theme (GitHub-dark inspired) ── */
+:root {
+  --bg: #0d1117;
+  --bg-card: #161b22;
+  --bg-cell: #0d1117;
+  --border: #30363d;
+  --border-l: #21262d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --input-bg: #0d1117;
+  --placeholder: #6b7280;
+  --hover-bg: #1c2128;
+  --brand: #6366f1;
+  --brand-glow: rgba(99,102,241,0.3);
+}
+:root.light {
+  --bg: #ffffff;
+  --bg-card: #ffffff;
+  --bg-cell: #f9fafb;
+  --border: #e5e7eb;
+  --border-l: #f3f4f6;
+  --text: #111827;
+  --text-muted: #6b7280;
+  --text-dim: #d1d5db;
+  --input-bg: #fafafa;
+  --placeholder: #9ca3af;
+  --hover-bg: #f3f4f6;
+  --brand: #6366f1;
+  --brand-glow: rgba(99,102,241,0.15);
+}
+
+body {
+  margin: 0; padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ── Layout ── */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 260px;
+  background: var(--bg-cell);
+  border-right: 1px solid var(--border);
+  padding: 24px 16px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 4px;
+}
+.sidebar-header-icon { font-size: 1.3rem; }
+.sidebar-header-title { font-weight: 700; font-size: 1.05rem; color: var(--text); }
+.sidebar-sub { font-size: 0.78rem; color: var(--text-muted); margin-bottom: 14px; }
+.sidebar-divider { border: none; height: 1px; background: var(--border-l); margin: 14px 0; }
+.sidebar-section-title {
+  font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 8px;
+}
+.tool-item {
+  display: flex; align-items: center; gap: 8px; padding: 5px 0;
+}
+.tool-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; display: inline-block;
+}
+.tool-dot.ok { background: #10b981; box-shadow: 0 0 4px rgba(16,185,129,0.3); }
+.tool-dot.warn { background: #f59e0b; }
+.tool-dot.err { background: #ef4444; }
+.tool-info { flex: 1; }
+.tool-name { font-size: 0.82rem; font-weight: 600; color: var(--text); }
+.tool-desc { font-size: 0.7rem; color: var(--text-muted); line-height: 1.3; }
+.tool-status { font-size: 0.65rem; font-weight: 600; white-space: nowrap; }
+.tool-status.ready { color: #10b981; }
+.tool-status.missing { color: var(--text-dim); }
+.theme-select {
+  width: 100%; padding: 6px 10px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--text);
+  font-size: 0.8rem; font-family: 'Inter', sans-serif; outline: none; cursor: pointer;
+}
+.cache-info { font-size: 0.8rem; color: var(--text-muted); line-height: 1.7; }
+.cache-info strong { color: var(--text); font-weight: 600; }
+.sidebar-footer { margin-top: 24px; font-size: 0.68rem; color: var(--text-dim); }
+
+/* ── Loading spinner in sidebar ── */
+.sb-spinner {
+  display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border);
+  border-top-color: var(--brand); border-radius: 50%; animation: spin 0.6s linear infinite;
+  margin-right: 6px; vertical-align: middle;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Main content ── */
+.main {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; padding: 0 24px; max-width: 700px; margin: 0 auto;
+}
+
+/* ── Brand ── */
+.brand {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 40px 0 6px 0;
+}
+.brand-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.4rem; box-shadow: 0 4px 16px var(--brand-glow); flex-shrink: 0;
+}
+.brand-title {
+  font-size: 1.85rem; font-weight: 800; color: var(--text);
+  letter-spacing: -0.03em; line-height: 1.2;
+}
+.hero-subtitle {
+  text-align: center; font-size: 1rem; color: var(--text-muted);
+  margin: 8px auto 24px auto; line-height: 1.6; max-width: 500px;
+}
+
+/* ── Search ── */
+.search-wrap { width: 100%; max-width: 560px; position: relative; }
+.search-icon {
+  position: absolute; left: 18px; top: 50%; transform: translateY(-50%);
+  font-size: 1rem; color: var(--text-muted); z-index: 2; pointer-events: none;
+}
+.search-input {
+  width: 100%; padding: 15px 20px 15px 48px; font-size: 1rem;
+  border: 2px solid var(--border); border-radius: 12px; outline: none;
+  font-family: 'JetBrains Mono', monospace; background: var(--input-bg); color: var(--text);
+  transition: all 0.2s ease; box-sizing: border-box; height: 52px;
+}
+.search-input:focus { border-color: #6366f1; background: var(--bg); box-shadow: 0 0 0 4px rgba(99,102,241,0.12); }
+.search-input::placeholder { color: var(--placeholder); font-family: 'Inter', sans-serif; opacity: 1; }
+.search-row {
+  display: flex; gap: 8px; width: 100%; max-width: 560px;
+}
+.search-row .search-wrap { flex: 1; }
+.btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6); border: none; border-radius: 10px;
+  font-weight: 600; font-size: 0.95rem; height: 52px; color: white;
+  box-shadow: 0 2px 8px rgba(99,102,241,0.25); transition: all 0.2s ease;
+  cursor: pointer; padding: 0 22px; white-space: nowrap; font-family: 'Inter', sans-serif;
+  flex-shrink: 0; min-width: 120px;
+}
+.btn-primary:hover { box-shadow: 0 4px 16px rgba(99,102,241,0.4); transform: translateY(-1px); }
+.btn-primary:active { transform: translateY(0); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+/* ── Spinner next to search ── */
+.search-spinner {
+  display: none; width: 20px; height: 20px;
+  border: 2px solid var(--border); border-top-color: var(--brand); border-radius: 50%;
+  animation: spin 0.6s linear infinite; flex-shrink: 0; align-self: center;
+}
+
+/* ── Chips ── */
+.chips {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  width: 100%; max-width: 560px; margin-top: 10px;
+}
+.chips-label { font-size: 0.78rem; color: var(--text-muted); font-weight: 500; margin-right: 4px; white-space: nowrap; }
+.chip {
+  display: inline-block; padding: 5px 14px; border-radius: 100px;
+  font-size: 0.78rem; font-weight: 500; font-family: 'JetBrains Mono', monospace;
+  border: 1px solid var(--border); color: var(--text-muted); background: transparent;
+  cursor: pointer; transition: all 0.15s ease; text-decoration: none; line-height: 1.5;
+}
+.chip:hover { background: var(--hover-bg); border-color: #6366f1; color: #a5b4fc; }
+
+/* ── Action row ── */
+.action-row {
+  display: flex; justify-content: flex-end; width: 100%; max-width: 560px; margin-top: 8px;
+}
+.btn-ghost {
+  background: transparent; border: 1px solid var(--border); border-radius: 10px;
+  font-weight: 500; font-size: 0.85rem; padding: 8px 16px; color: var(--text-muted);
+  cursor: pointer; transition: all 0.15s ease; font-family: 'Inter', sans-serif;
+}
+.btn-ghost:hover { border-color: #6366f1; color: #a5b4fc; background: var(--hover-bg); }
+
+/* ── Divider ── */
+.divider { border: none; height: 1px; background: var(--border-l); width: 100%; max-width: 640px; margin: 20px 0; }
+
+/* ── Empty state ── */
+.empty-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  width: 100%; max-width: 640px; margin-top: 28px;
+}
+.empty-card {
+  padding: 18px 14px; border-radius: 11px; border: 1px solid var(--border-l);
+  text-align: center; background: var(--bg-cell); transition: all 0.15s ease;
+}
+.empty-card:hover { border-color: var(--border); background: var(--hover-bg); }
+.empty-card-icon { font-size: 1.4rem; margin-bottom: 6px; }
+.empty-card-title { font-size: 0.8rem; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+.empty-card-desc { font-size: 0.7rem; color: var(--text-muted); line-height: 1.4; }
+
+/* ── Result card ── */
+.result-card {
+  width: 100%; max-width: 640px; border: 1px solid var(--border); border-radius: 14px;
+  overflow: hidden; background: var(--bg-card); box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  animation: fadeIn 0.25s ease; margin-top: 20px;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.result-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding: 20px 24px; border-bottom: 1px solid var(--border-l);
+}
+.result-badge {
+  display: inline-block; padding: 2px 10px; border-radius: 6px;
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.result-value {
+  font-size: 1.15rem; font-weight: 700; color: var(--text);
+  font-family: 'JetBrains Mono', monospace; margin-top: 6px; word-break: break-all;
+}
+.result-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+.tag {
+  display: inline-block; padding: 1px 7px; border-radius: 4px;
+  font-size: 0.65rem; font-weight: 600; margin-left: 4px; vertical-align: middle;
+}
+.tag-cached { background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2); }
+.score-ring {
+  width: 68px; height: 68px; border-radius: 50%; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  font-weight: 800; flex-shrink: 0;
+}
+.score-number { font-size: 1.35rem; line-height: 1; }
+.score-label { font-size: 0.55rem; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.7; margin-top: 1px; }
+.score-severity {
+  display: inline-block; padding: 2px 10px; border-radius: 4px;
+  font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; margin-top: 3px;
+}
+
+/* Data grid in result card */
+.data-section { padding: 4px 24px 18px 24px; }
+.data-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 8px; }
+.data-cell {
+  padding: 10px 12px; border-radius: 8px; background: var(--bg-cell);
+  border: 1px solid var(--border-l);
+}
+.data-cell-label {
+  font-size: 0.62rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 2px;
+}
+.data-cell-value {
+  font-size: 0.85rem; font-weight: 500; color: var(--text); word-break: break-all;
+}
+
+/* Tool row */
+.tool-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 24px;
+  font-size: 0.72rem; color: var(--text-muted); border-top: 1px solid var(--border-l); flex-wrap: wrap;
+}
+
+/* ── Error box ── */
+.error-box {
+  width: 100%; max-width: 560px; margin: 20px auto; padding: 14px 18px;
+  border-radius: 10px; background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.2); color: var(--text); font-size: 0.9rem;
+}
+.error-box .error-icon { margin-right: 8px; }
+
+/* ── LLM summary ── */
+.llm-box {
+  width: 100%; max-width: 640px; margin: 16px auto; padding: 14px 18px;
+  border-radius: 10px; background: rgba(99,102,241,0.06);
+  border: 1px solid rgba(99,102,241,0.15); color: var(--text);
+  font-size: 0.85rem; line-height: 1.6;
+}
+.llm-box .llm-label {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #8b5cf6; margin-bottom: 4px;
+}
+
+/* ── Batch section ── */
+.batch-section { width: 100%; max-width: 640px; }
+.dropzone {
+  border: 2px dashed var(--border); border-radius: 10px;
+  padding: 28px; text-align: center; background: var(--bg-cell);
+  transition: all 0.15s ease; cursor: pointer; color: var(--text-muted);
+}
+.dropzone:hover { border-color: #6366f1; }
+.dropzone-icon { font-size: 2rem; margin-bottom: 8px; }
+.hidden { display: none; }
+
+/* ── Footer ── */
+.footer {
+  text-align: center; font-size: 0.72rem; color: var(--text-dim);
+  margin-top: 40px; padding-bottom: 20px;
+}
+.footer a { color: var(--text-muted); text-decoration: none; }
+.footer a:hover { color: #6366f1; }
+
+/* ── Batch results ── */
+#batchResults .result-card { margin-top: 16px; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar { width: 200px; padding: 16px 12px; }
+  .empty-grid { grid-template-columns: repeat(2, 1fr); }
+  .brand-title { font-size: 1.4rem; }
+  .search-row { flex-direction: column; }
+  .btn-primary { width: 100%; min-width: unset; }
+}
+@media (max-width: 480px) {
+  .app-layout { flex-direction: column; }
+  .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+  .empty-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="app-layout">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <span class="sidebar-header-icon">🛡️</span>
+      <span class="sidebar-header-title">IOC Enrichment</span>
+    </div>
+    <div class="sidebar-sub">Threat intelligence lookup for SOC analysts.</div>
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-title">Data Sources</div>
+    <div id="sidebarTools">
+      <div style="font-size:0.75rem;color:var(--text-muted);">
+        <span class="sb-spinner"></span> Loading...
+      </div>
+    </div>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-title">Appearance</div>
+    <select class="theme-select" id="themeSelect" onchange="setTheme(this.value)">
+      <option value="dark">🌙 Dark</option>
+      <option value="light">☀️ Light</option>
+      <option value="system">💻 System</option>
+    </select>
+
+    <hr class="sidebar-divider">
+
+    <div class="sidebar-section-title">Cache</div>
+    <div class="cache-info" id="cacheInfo">
+      <span class="sb-spinner"></span> Loading...
+    </div>
+
+    <div class="sidebar-footer">Pipeline v1.0 · MIT License</div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
+
+    <!-- Brand -->
+    <div class="brand">
+      <div class="brand-icon">🛡️</div>
+      <div class="brand-title">IOC Enrichment</div>
+    </div>
+    <div class="hero-subtitle">
+      Look up any IP, domain, file hash, or URL against multiple threat intelligence sources.
+      Get geolocation, abuse reports, malware detections, and a risk score — instantly.
+    </div>
+
+    <!-- Search -->
+    <div class="search-row">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchInput" type="text"
+               placeholder="Paste an IP, domain, hash, or URL — e.g. 8.8.8.8"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();doLookup();}">
+      </div>
+      <button class="btn-primary" id="lookupBtn" onclick="doLookup()">Look Up</button>
+      <div class="search-spinner" id="searchSpinner"></div>
+    </div>
+
+    <!-- Chips -->
+    <div class="chips">
+      <span class="chips-label">Try:</span>
+      <span class="chip" onclick="fillSearch('8.8.8.8')">8.8.8.8</span>
+      <span class="chip" onclick="fillSearch('5.188.62.38')">5.188.62.38</span>
+      <span class="chip" onclick="fillSearch('iuqerfsodp9...')">iuqerfsodp9...</span>
+      <span class="chip" onclick="fillSearch('d41d8cd98f...')">d41d8cd98f...</span>
+    </div>
+
+    <!-- Actions -->
+    <div class="action-row">
+      <button class="btn-ghost" id="batchToggle" onclick="toggleBatch()">📂 Batch Upload</button>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Results container -->
+    <div id="results"></div>
+
+    <!-- Error container -->
+    <div id="errors"></div>
+
+    <!-- Empty state -->
+    <div class="empty-grid" id="emptyState">
+      <div class="empty-card">
+        <div class="empty-card-icon">🌐</div>
+        <div class="empty-card-title">IP Address</div>
+        <div class="empty-card-desc">Location, ISP, ASN, and whether it's from a risky country.</div>
+      </div>
+      <div class="empty-card">
+        <div class="empty-card-icon">🔗</div>
+        <div class="empty-card-title">Domain</div>
+        <div class="empty-card-desc">Registrar, DNS records, malware detections from 70+ engines.</div>
+      </div>
+      <div class="empty-card">
+        <div class="empty-card-icon">🔐</div>
+        <div class="empty-card-title">File Hash</div>
+        <div class="empty-card-desc">Scan results from VirusTotal — see which AV engines flagged it.</div>
+      </div>
+      <div class="empty-card">
+        <div class="empty-card-icon">🔗</div>
+        <div class="empty-card-title">URL</div>
+        <div class="empty-card-desc">Check if a link is malicious before you click it.</div>
+      </div>
+    </div>
+
+    <!-- Batch section -->
+    <div class="batch-section hidden" id="batchSection">
+      <hr class="divider">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+        <span style="font-size:1.1rem;">📂</span>
+        <span style="font-weight:700;font-size:1rem;">Batch Processing</span>
+      </div>
+      <div style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+        Upload a CSV file with columns: <code>type, value, source, context</code>
+      </div>
+      <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+        <div class="dropzone-icon">📄</div>
+        <div>Click to upload or drag a file here</div>
+        <div style="font-size:0.75rem;margin-top:4px;">.csv or .json</div>
+      </div>
+      <input type="file" id="fileInput" accept=".csv,.json" style="display:none" onchange="uploadBatch(event)">
+      <div id="batchProgress" style="margin-top:12px;font-size:0.85rem;color:var(--text-muted);display:none;">
+        <span class="sb-spinner"></span> Processing...
+      </div>
+      <div id="batchResults"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      IOC Enrichment Pipeline ·
+      <a href="https://github.com/Tamerktb/ioc-enrichment-pipeline" target="_blank">GitHub</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// Theme
+// ═══════════════════════════════════════════════════════════════════════════════
+function setTheme(theme) {
+  const root = document.documentElement;
+  if (theme === 'system') {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    root.classList.toggle('light', !prefersDark);
+    localStorage.setItem('ioc-theme', 'system');
+  } else if (theme === 'light') {
+    root.classList.add('light');
+    localStorage.setItem('ioc-theme', 'light');
+  } else {
+    root.classList.remove('light');
+    localStorage.setItem('ioc-theme', 'dark');
+  }
+}
+// Restore saved theme on load
+(function() {
+  const saved = localStorage.getItem('ioc-theme') || 'dark';
+  document.getElementById('themeSelect').value = saved;
+  setTheme(saved);
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Sidebar: Load status
+// ═══════════════════════════════════════════════════════════════════════════════
+async function loadStatus() {
+  try {
+    const resp = await fetch('/api/status');
+    const data = await resp.json();
+
+    // Tools
+    let toolsHtml = '';
+    for (const t of data.tools) {
+      const ok = t.ready;
+      toolsHtml += `
+        <div class="tool-item">
+          <span class="tool-dot ${ok ? 'ok' : 'err'}"></span>
+          <div class="tool-info">
+            <div class="tool-name">${t.name}</div>
+            <div class="tool-desc">${t.description || ''}</div>
+          </div>
+          <span class="tool-status ${ok ? 'ready' : 'missing'}">${ok ? 'Ready' : 'No API key'}</span>
+        </div>`;
+    }
+    document.getElementById('sidebarTools').innerHTML = toolsHtml;
+
+    // Cache
+    const c = data.cache;
+    document.getElementById('cacheInfo').innerHTML =
+      `<strong>${c.total_entries}</strong> entries · <strong>${(c.hit_rate * 100).toFixed(0)}%</strong> hit rate`;
+  } catch(e) {
+    document.getElementById('sidebarTools').innerHTML =
+      '<div style="font-size:0.75rem;color:var(--text-dim);">Could not load status</div>';
+    document.getElementById('cacheInfo').innerHTML = '—';
+  }
+}
+loadStatus();
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Chip click → fill search
+// ═══════════════════════════════════════════════════════════════════════════════
+function fillSearch(val) {
+  document.getElementById('searchInput').value = val;
+  doLookup();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Lookup
+// ═══════════════════════════════════════════════════════════════════════════════
+async function doLookup() {
+  const input = document.getElementById('searchInput');
+  const val = input.value.trim();
+  if (!val) return;
+
+  const btn = document.getElementById('lookupBtn');
+  const spinner = document.getElementById('searchSpinner');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+
+  // Clear previous results + errors
+  document.getElementById('results').innerHTML = '';
+  document.getElementById('errors').innerHTML = '';
+  document.getElementById('emptyState').style.display = 'none';
+
+  try {
+    const resp = await fetch('/api/enrich', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ioc: val }),
+    });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      showError(data.error || 'Lookup failed');
+      return;
+    }
+
+    renderResult(data);
+  } catch(e) {
+    showError('Network error: could not reach server');
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Render a single result
+// ═══════════════════════════════════════════════════════════════════════════════
+function renderResult(data) {
+  const container = document.getElementById('results');
+
+  const sev = data.score.severity;
+  const sevColors = getSeverityColors(sev);
+  const scoreVal = data.score.score;
+
+  // Build cells
+  let cellsHtml = '';
+  for (const toolName in data.tools) {
+    const tool = data.tools[toolName];
+    for (const [label, value] of tool.cells) {
+      cellsHtml += `
+        <div class="data-cell">
+          <div class="data-cell-label">${label}</div>
+          <div class="data-cell-value">${value}</div>
+        </div>`;
+    }
+  }
+
+  // Tool row
+  let toolRowHtml = '';
+  for (const name in data.tool_status) {
+    const dot = data.tool_status[name];
+    toolRowHtml += `<span class="tool-dot ${dot}"></span><span class="tool-name">${name}</span> `;
+  }
+
+  // Meta
+  const ioc = data.ioc;
+  let meta = `${ioc.source} · ⏱ ${data.elapsed.toFixed(2)}s`;
+  if (data.was_cached) {
+    meta += ' · <span class="tag tag-cached">⚡ cached</span>';
+  }
+
+  // LLM summary
+  let llmHtml = '';
+  if (data.llm_summary) {
+    llmHtml = `
+      <div class="llm-box">
+        <div class="llm-label">🤖 AI Threat Summary</div>
+        ${data.llm_summary}
+      </div>`;
+  }
+
+  const card = `
+    <div class="result-card">
+      <div class="result-top">
+        <div>
+          <span class="result-badge"
+                style="background:${sevColors.bg};color:${sevColors.color};border:1px solid ${sevColors.ring};">${ioc.type}</span>
+          <div class="result-value">${ioc.value}</div>
+          <div class="result-meta">${meta}</div>
+        </div>
+        <div style="text-align:center;flex-shrink:0;margin-left:16px;">
+          <div class="score-ring" style="background:${sevColors.bg};border:3px solid ${sevColors.ring};">
+            <div class="score-number" style="color:${sevColors.color};">${scoreVal}</div>
+            <div class="score-label">out of 10</div>
+          </div>
+          <div class="score-severity" style="color:${sevColors.color};background:${sevColors.bg};">${sev}</div>
+        </div>
+      </div>
+      <div class="data-section">
+        <div class="data-grid">${cellsHtml}</div>
+        <div class="tool-row">${toolRowHtml}</div>
+      </div>
+    </div>
+    ${llmHtml}`;
+
+  container.innerHTML = card;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Severity colors (mirrors Python SEVERITY dict)
+// ═══════════════════════════════════════════════════════════════════════════════
+function getSeverityColors(sev) {
+  const isDark = !document.documentElement.classList.contains('light');
+  const colors = {
+    critical: { color: '#dc2626', ring: '#fecaca', bg: isDark ? '#2d1215' : '#fef2f2' },
+    high:     { color: '#ea580c', ring: '#fed7aa', bg: isDark ? '#2d1a0e' : '#fff7ed' },
+    medium:   { color: '#d97706', ring: '#fde68a', bg: isDark ? '#2d2008' : '#fffbeb' },
+    low:      { color: '#059669', ring: '#a7f3d0', bg: isDark ? '#0d1f17' : '#ecfdf5' },
+    none:     { color: '#6b7280', ring: '#e5e7eb', bg: isDark ? '#1c1c1c' : '#f9fafb' },
+  };
+  return colors[sev] || colors.none;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Error display
+// ═══════════════════════════════════════════════════════════════════════════════
+function showError(msg) {
+  document.getElementById('errors').innerHTML =
+    `<div class="error-box"><span class="error-icon">⚠️</span> ${msg}</div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Batch toggle
+// ═══════════════════════════════════════════════════════════════════════════════
+function toggleBatch() {
+  const section = document.getElementById('batchSection');
+  const btn = document.getElementById('batchToggle');
+  const isHidden = section.classList.contains('hidden');
+  section.classList.toggle('hidden');
+  btn.textContent = isHidden ? '✕ Close Batch' : '📂 Batch Upload';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Batch upload
+// ═══════════════════════════════════════════════════════════════════════════════
+async function uploadBatch(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const progress = document.getElementById('batchProgress');
+  const resultsDiv = document.getElementById('batchResults');
+  progress.style.display = 'block';
+  resultsDiv.innerHTML = '';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const resp = await fetch('/api/batch', { method: 'POST', body: formData });
+    const data = await resp.json();
+
+    if (!resp.ok) {
+      progress.innerHTML = `<div class="error-box"><span class="error-icon">⚠️</span> ${data.error}</div>`;
+      return;
+    }
+
+    progress.style.display = 'none';
+    let allHtml = '';
+    for (const r of data.results) {
+      // Temporarily render each result
+      const sev = r.score.severity;
+      const sevColors = getSeverityColors(sev);
+      let cellsHtml = '';
+      for (const toolName in r.tools) {
+        for (const [label, value] of r.tools[toolName].cells) {
+          cellsHtml += `
+            <div class="data-cell">
+              <div class="data-cell-label">${label}</div>
+              <div class="data-cell-value">${value}</div>
+            </div>`;
+        }
+      }
+      let toolRow = '';
+      for (const name in r.tool_status) {
+        toolRow += `<span class="tool-dot ${r.tool_status[name]}"></span><span class="tool-name">${name}</span> `;
+      }
+      const meta = `${r.ioc.source} · ⏱ ${r.elapsed.toFixed(2)}s${r.was_cached ? ' · <span class="tag tag-cached">⚡ cached</span>' : ''}`;
+      allHtml += `
+        <div class="result-card">
+          <div class="result-top">
+            <div>
+              <span class="result-badge"
+                    style="background:${sevColors.bg};color:${sevColors.color};border:1px solid ${sevColors.ring};">${r.ioc.type}</span>
+              <div class="result-value">${r.ioc.value}</div>
+              <div class="result-meta">${meta}</div>
+            </div>
+            <div style="text-align:center;flex-shrink:0;margin-left:16px;">
+              <div class="score-ring" style="background:${sevColors.bg};border:3px solid ${sevColors.ring};">
+                <div class="score-number" style="color:${sevColors.color};">${r.score.score}</div>
+                <div class="score-label">out of 10</div>
+              </div>
+              <div class="score-severity" style="color:${sevColors.color};background:${sevColors.bg};">${sev}</div>
+            </div>
+          </div>
+          <div class="data-section">
+            <div class="data-grid">${cellsHtml}</div>
+            <div class="tool-row">${toolRow}</div>
+          </div>
+        </div>`;
+    }
+    progress.innerHTML = `<div style="color:#10b981;font-size:0.9rem;margin-bottom:8px;">✅ Processed ${data.count} IOC(s) from ${file.name}</div>`;
+    resultsDiv.innerHTML = allHtml;
+  } catch(e) {
+    progress.innerHTML = `<div class="error-box"><span class="error-icon">⚠️</span> Network error</div>`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Drag-and-drop support for batch file
+// ═══════════════════════════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('dropzone');
+  dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.style.borderColor = '#6366f1'; });
+  dz.addEventListener('dragleave', () => { dz.style.borderColor = ''; });
+  dz.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dz.style.borderColor = '';
+    const file = e.dataTransfer.files[0];
+    if (file && (file.name.endsWith('.csv') || file.name.endsWith('.json'))) {
+      document.getElementById('fileInput').files = e.dataTransfer.files;
+      uploadBatch({ target: { files: [file] } });
+    }
+  });
+});
+</script>
+
+</body>
+</html>
