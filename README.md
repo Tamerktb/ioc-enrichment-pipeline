@@ -4,6 +4,8 @@
 
 A production-grade pipeline that ingests raw indicators of compromise (IPs, domains, file hashes, URLs), enriches them across multiple threat intelligence APIs, caches results, computes risk scores, and outputs structured reports ready for SIEM ingestion.
 
+![IOC enrichment pipeline](pipeline.png)
+
 ```
 Raw IOC (IP/domain/hash/URL)
         │
