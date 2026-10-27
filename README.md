@@ -99,8 +99,6 @@ pip install -r requirements.txt streamlit && streamlit run app.py
   Local URL: http://localhost:8501
 ```
 
-**Step 3** — Open **http://localhost:8501** in your browser.
-
 ### How to use the Web UI
 
 The interface is self-explanatory — here's what you'll see:
